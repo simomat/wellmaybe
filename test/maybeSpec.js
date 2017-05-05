@@ -506,5 +506,73 @@ describe("converting Maybes", function () {
     });
 });
 
-// TODO: what should happen if x.map() is called and further x.map() or x.orElse() calls are made?
+describe('reusing Maybe', function () {
 
+    it('given a maybeOf(truthlyValue), calling map() twice on the same object calls the handler both times with same argument and does not call the a handler passed to orElse()', function () {
+        let maybe = maybeOf(44);
+        let fun = spy();
+        let noFun = spy();
+
+        maybe.map(fun);
+        maybe.map(fun);
+        maybe.orElse(noFun);
+
+        assertThat(fun, wasCalled().times(2));
+        assertThat(fun, wasCalledWith(44).times(2));
+        assertThat(noFun, wasNotCalled());
+    });
+
+    it('given a maybeOf(falsyValue), calling orElse() twice on the same object calls the handler both times and does not call a handler passed to map()', function () {
+        let maybe = maybeOf(falsyValue);
+        let fun = spy();
+        let noFun = spy();
+
+        maybe.orElse(fun);
+        maybe.orElse(fun);
+        maybe.map(noFun);
+
+        assertThat(fun, wasCalled().times(2));
+        assertThat(noFun, wasNotCalled());
+    });
+
+    it('given a maybeOf(resolvingPromise), calling map() twice on the same object calls the handler both times with same argument and does not call the a handler passed to orElse()', function (done) {
+        let maybe = maybeOf(Promise.resolve(34));
+        let fun = spy();
+        let noFun = spy();
+
+        let result1 = maybe.map(fun);
+        let result2 = maybe.map(fun);
+        let result3 = maybe.orElse(noFun);
+
+        await(result1, result2, result3).then(() => {
+            assertThat(fun, wasCalled().times(2));
+            assertThat(fun, wasCalledWith(34).times(2));
+            assertThat(noFun, wasNotCalled());
+            done();
+        });
+    });
+
+    it('given a maybeOf(falsyValue), calling orElse() twice on the same object calls the handler both times with same argument and does not call a handler passed to map()', function (done) {
+        let maybe = maybeOf(Promise.reject(23));
+        let fun = spy();
+        let noFun = spy();
+
+        let result1 = maybe.orElse(fun);
+        let result2 = maybe.orElse(fun);
+        let result3 = maybe.map(noFun);
+
+        await(result1, result2, result3).catch(() => {
+            assertThat(fun, wasCalled().times(2));
+            assertThat(fun, wasCalledWith(23).times(2));
+            assertThat(noFun, wasNotCalled());
+            done();
+        });
+    });
+});
+
+function await() {
+    return Promise.all(
+        Array
+            .from(arguments)
+            .map(maybe => maybe.asPromise()));
+}

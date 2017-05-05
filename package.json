@@ -1,7 +1,7 @@
 {
   "name": "wellmaybe",
   "description": "A monad implementation for mixing null-object pattern and promises",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "author": "Matthias Simon",
   "homepage": "https://github.com/simomat/wellmaybe#readme",
@@ -12,6 +12,12 @@
   "bugs": {
     "url": "https://github.com/simomat/wellmaybe/issues"
   },
+  "keywords": [
+    "maybe",
+    "monad",
+    "functional",
+    "promise"
+  ],
   "main": "maybe.js",
   "scripts": {
     "test": "mocha"
