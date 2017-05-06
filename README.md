@@ -28,7 +28,7 @@ let getItemList = () => undefined;
 maybeOf(getItemList())
   .orElse(() => [])                    // provide [] if inner value is falsy
   .map(items => handleItems(items))    // pass items to handler ([] in that case)
-  .map(printResult);                   // pass previous result (the result of handleItems(items)) to next handler
+  .map(printResult);                   // pass previous result (of handleItems(items)) to next handler
 ```
 ```javascript
 // work with Promises
