@@ -2,6 +2,7 @@
 
 A monad implementation that provides a general API for null-object pattern and promises.
 
+`npm install wellmaybe`
 
 ### So why would you use that?
  * Provides abstraction of null-object pattern and asynchronous execution with a one-size-fits-all API. Use it everywhere, forget about sync/async control flow. Well, at least a little.
