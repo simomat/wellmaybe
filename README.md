@@ -19,58 +19,61 @@ Due to the nature of JavaScript, you would not get the benefits of type safe mon
 // execute handler functions based on values
 let fun = () => 2;
 maybeOf(fun())
-  .map(v => log('got ' + v))            // -> log('got 2')
-  .orElse(() => log('no value'));       // not called
+  .map(v => log('got ' + v))            // -> log('got 2') is called
+  .orElse(() => log('no value'));       // this handler is not called
 ```
 ```javascript
-// provide a default value
+// provide a default value and chain handlers
 let getItemList = () => undefined;
 maybeOf(getItemList())
   .orElse(() => [])                    // provide [] if inner value is falsy
-  .map(items => handleItems(items))    // pass items or [] to handler
-  .map(printResult);                   // pass result of handleItems() to function (if truthly)
+  .map(items => handleItems(items))    // pass items to handler ([] in that case)
+  .map(printResult);                   // pass previous result (the result of handleItems(items)) to next handler
 ```
 ```javascript
-// extract nested values - automatic 'flatMap'
-let getItems = c => maybeOf(loadLast(c));
-maybeOf(getItemCount())
-  .map(c => getItems(c))                // creates maybeOf(maybeOf(...))
-  .orElse(() => defaultItems())         // if loadLast(c) returns falsy
-  .map(items => handleItems(items));    // handleItems gets result of loadLast(c) or defaultItems()
-```
-```javascript
-// work with Promise
+// work with Promises
 let myPromise = new Promise((resolve, reject) => 
                       setTimeout(() => resolve(42), 1000));
-maybeOf(myPromise)               // maybeOf that symbolizes the value of a promise
-  .map(v => addFive(v));         // call addFive(42) asynchronously
+maybeOf(myPromise)              // maybeOf that symbolizes the value of a promise
+  .map(v => addFive(v))         // call addFive(42) asynchronously
+  .map(r => log(r))             // calls log(r) whenever addFive() is done
 ```
 ```javascript
-// rejecting Promise
-maybeOf(1)
-  .map(() => Promise.reject('whoopsi'))   // rejected Promise is handled with orElse()
-  .orElse(log);                           // -> log('whoopsi')
+// handle rejecting Promises 
+maybeOf(Promise.reject('whoopsi'))  // a maybe of a rejection promise
+  .map(() => doSomething())         // is not called because the promise is rejecting
+  .orElse(log);                     // -> log('whoopsi') is called
 ```
 ```javascript
-// extract nested values (automatic 'flatMap') also for mixed nesting of Promise/maybeOf
-maybeOf(Promise.resolve(maybeOf(1)))
-  .map(log);                             // -> log(1)
+// extract nested values - automatic 'flatMap' behavior
+let getItems = count => maybeOf(something(count));
+maybeOf(getCount())
+  .map(count => getItems(count))        // creates maybeOf(maybeOf(...))
+  .orElse(() => getDefaultItems())      // provide alternative result if something(count) returns falsy
+  .map(items => handleItems(items));    // handleItems gets result of something(count) or getDefaultItems()
 ```
 ```javascript
-// concrete value extraction works only as a Promise!
-// rarely needed - map()/orElse() is sufficient in most cases
-let maybe = getSomeMaybe();           // you might not know if inner value is present here
-let promise = maybe.asPromise();      // .then() and .catch() are used as .map() an .orElse()
+// extract nested promises, too
+// this also applies for nested mixed Promise/maybeOf
+maybeOf(true)
+  .map(() => Promise.resolve(maybeOf(1)))  //
+  .map(log);                               // -> log(1) is called
+```
+```javascript
+// leave the monad space - extract concrete value as a Promise (rarely needed)
+let maybe = getSomeMaybe();           // you might not know if inner value is present yet
+let promise = maybe.asPromise();      // .then() and .catch() act like .map() and .orElse() of the maybe 
 ```
 
 ### Reasons why you might not want to use that 
- * Control flow is obfuscated, especially when mixing `maybeOf(Promise)` and `maybeOf(distinctValue)`.
- * One cannot get the inner value of a maybe like `maybe.getValue()`, because it might not be resolved at this time. However `maybe.asPromise()` returns the value as Promise. (Other APIs might insist on promises.)
+ * The control flow is obfuscated when mixing `maybeOf(Promise)` and `maybeOf(distinctValue)` and debugging becomes *different*.
+ * You cannot get the inner value of a maybe like `maybe.getValue()`, because it might not be resolved at this time. However `maybe.asPromise()` returns the value as Promise. (Other APIs might insist on promises.)
  * There is a little semantics clash between `Promise` and `maybeOf`: 
    * `Promise.resolve(undefined)` is a valid semantic for "all ok, you can go on, but no return value present" and control flow is preserved. (I.e. async *void functions*)
-   * A `maybeOf(Promise.resolve(undefined))` resolves as "oops, no result, `orElse()` flow is chosen". This can horribly brake the control flow.
-   * This issue can be handled by not resolving a promise with a falsy value or by transforming it to a truthly promise, e.g. `promiseOfUndefined().then(() => true)`
- * And yes, one extra object per function return value is created (the next `maybeOf` object). 
+   * A `maybeOf(Promise.resolve(undefined))` resolves as "oops, no result, `orElse()` flow is chosen". This can cause an unintended control flow. But you can handle this by 
+     * not resolving a promise with a falsy value when it's in your hands,
+     * or by transforming the promise to a truthly promise, e.g. `promiseOfUndefined().then(() => true)`.
+ * And yes, one extra object is created when using `maybeOf()`,  `map()` and `orElse()`.
 
 
 ### What actually might be wrong with `maybeOf` 
@@ -79,4 +82,4 @@ This implementation grew as an experiment but theoretical use cases appear to be
 
 Things that are questionable:
  * Is the check for a falsy/truthly value good enough to determine if the value is *fulfilled*?
- * Is the automatic flatMap() behavior what we want? (`maybeOf(maybeOf(21))` resolves to 21 and so does `maybeOf(21).map(maybeOf)`.) This certainly breaks the monad laws. I'll go to jail, I guess. But in defence, the holy Promise acts exactly like that. (`Promise.resolve(Promise.resolve(21))` resolves to `21`, not `Promise.resolve(21)`)
+ * Is the automatic flatMap() behavior what we want? `maybeOf(maybeOf(21))` resolves to 21 and so does `maybeOf(21).map(maybeOf)`. This certainly breaks the monad laws. I'll go to jail, I guess. But in defence, the holy `Promise` acts exactly like that: `Promise.resolve(Promise.resolve(21))` resolves to `21`, not to `Promise.resolve(21)`.
