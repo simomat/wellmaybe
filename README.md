@@ -20,24 +20,24 @@ Due to the nature of JavaScript, you would not get the benefits of type safe mon
 // execute handler functions based on values
 let fun = () => 2;
 maybeOf(fun())
-  .map(v => log('got ' + v))            // -> log('got 2') is called
-  .orElse(() => log('no value'));       // this handler is not called
+  .map(v => log('got ' + v))       // -> log('got 2') is called
+  .orElse(() => log('no value'));  // this handler is not called
 ```
 ```javascript
 // provide a default value and chain handlers
 let getItemList = () => undefined;
 maybeOf(getItemList())
-  .orElse(() => [])                    // provide [] if inner value is falsy
-  .map(items => handleItems(items))    // pass items to handler ([] in that case)
-  .map(printResult);                   // pass previous result (of handleItems(items)) to next handler
+  .orElse(() => [])                  // provide [] if inner value is falsy
+  .map(items => handleItems(items))  // pass items to handler ([] in that case)
+  .map(printResult);                 // pass previous result (of handleItems(items)) to next handler
 ```
 ```javascript
 // work with Promises
 let myPromise = new Promise((resolve, reject) => 
                       setTimeout(() => resolve(42), 1000));
-maybeOf(myPromise)              // maybeOf that symbolizes the value of a promise
-  .map(v => addFive(v))         // call addFive(42) asynchronously
-  .map(r => log(r))             // calls log(r) whenever addFive() is done
+maybeOf(myPromise)        // maybeOf that symbolizes the value of a promise
+  .map(v => addFive(v))   // call addFive(42) asynchronously
+  .map(r => log(r))       // calls log(r) whenever addFive() is done
 ```
 ```javascript
 // handle rejecting Promises 
@@ -49,9 +49,8 @@ maybeOf(Promise.reject('whoopsi'))  // a maybe of a rejection promise
 // extract nested values - automatic 'flatMap' behavior
 let getItems = count => maybeOf(something(count));
 maybeOf(getCount())
-  .map(count => getItems(count))        // creates maybeOf(maybeOf(...))
-  .orElse(() => getDefaultItems())      // provide alternative result if something(count) returns falsy
-  .map(items => handleItems(items));    // handleItems gets result of something(count) or getDefaultItems()
+  .map(getItems)      // results into a maybeOf(maybeOf(...))
+  .map(handleItems);  // -> handleItems(something(count)), not  handleItems(maybeOf(...))
 ```
 ```javascript
 // extract nested promises, too
@@ -62,8 +61,8 @@ maybeOf(true)
 ```
 ```javascript
 // leave the monad space - extract concrete value as a Promise (rarely needed)
-let maybe = getSomeMaybe();           // you might not know if inner value is present yet
-let promise = maybe.asPromise();      // .then() and .catch() act like .map() and .orElse() of the maybe 
+let maybe = getSomeMaybe();       // you might not know if inner value is present yet
+let promise = maybe.asPromise();  // .then() and .catch() act like .map() and .orElse() of the maybe 
 ```
 
 ### Reasons why you might not want to use that 
