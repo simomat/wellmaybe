@@ -1,69 +1,36 @@
-const isMaybe = value => value instanceof NaturalMaybe || value instanceof PromiseMaybe;
-function NaturalMaybe(value) {this._value = value;}
-NaturalMaybe.prototype = {
+function Maybe(value) { this._value = value; }
+Maybe.prototype = {
     map: function (fun) {
+        if (this._value instanceof Promise) {
+            return new Maybe(this._value.then(resolved => {
+                if (resolved instanceof Maybe) { return resolved.map(fun); }
+                if (resolved) { return fun(resolved); }
+                return resolved;})); }
         if (this._value) {
-            if (isMaybe(this._value)) {
-                return this._value.map(fun);
-            }
-            return maybeOf(fun(this._value));
-        }
-        return this;
-    },
+            return this._value instanceof Maybe ? this._value.map(fun) : new Maybe(fun(this._value)); }
+        return this; },
     orElse: function (fun) {
-        if (isMaybe(this._value)) {
-            return this._value.orElse(fun);
-        }
-        if (!this._value) {
-            return maybeOf(fun(this._value));
-        }
-        return maybeOf(this._value);
-    },
-    asPromise:function () {
-        if (this._value) {
-            if (isMaybe(this._value)) {
-                return this._value.asPromise();
-            }
-            return Promise.resolve(this._value);
-        }
-        return Promise.reject();
-    }
-};
-function PromiseMaybe(value) {this._value = value;}
-PromiseMaybe.prototype = {
-    map: function (fun) {
-        return maybeOf(this._value.then(resolved => {
-            if (isMaybe(resolved)) {
-                return resolved.map(fun);
-            }
-            if (resolved) {
-                return fun(resolved);
-            }
-            return resolved;}));
-    },
-    orElse: function (fun) {
-        return maybeOf(this._value.then(resolved => {
-            if (!resolved) {
-                return fun();
-            }
-            return resolved;
-            })
-            .catch(reason => fun(reason)));
-    },
+        if (this._value instanceof Promise) {
+            return new Maybe(this._value.then(resolved => {
+                if (resolved instanceof Maybe) { return resolved.orElse(fun); }
+                if (!resolved) { return fun(); }
+                return resolved;})
+            .catch(reason => fun(reason))); }
+        if (this._value instanceof Maybe) { return this._value.orElse(fun); }
+        return (this._value) ? new Maybe(this._value) : new Maybe(fun(this._value)) },
     asPromise: function () {
-        return this._value
-            .then(value => {
-                if (isMaybe(value)) {
-                    return value.asPromise();
-                }
-                return value;
-            });
-    }
+        if (this._value instanceof Promise) {
+            return this._value.then(value => value instanceof Maybe ? value.asPromise() : value); }
+        if (this._value) {
+            return this._value instanceof Maybe ? this._value.asPromise() : Promise.resolve(this._value); }
+        return Promise.reject(); }
 };
-const maybeOf = value => {
-    if (value instanceof Promise) {
-        return new PromiseMaybe(value);
-    }
-    return new NaturalMaybe(value);
+Maybe.of = value => value instanceof Maybe ? value : new Maybe(value);
+Maybe.all = function () {
+    return Array.prototype.reduce.call(
+        arguments,
+        (maybe, part) => maybe.map(results =>
+            Maybe.of(part).map(partResult => { results.push(partResult); return results; })),
+        new Maybe([]));
 };
-exports.maybeOf = maybeOf;
+exports.Maybe = Maybe;
