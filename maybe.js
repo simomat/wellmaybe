@@ -6,8 +6,7 @@ Maybe.prototype = {
                 if (resolved instanceof Maybe) { return resolved.map(fun); }
                 if (resolved) { return fun(resolved); }
                 return resolved;})); }
-        if (this._value) {
-            return this._value instanceof Maybe ? this._value.map(fun) : new Maybe(fun(this._value)); }
+        if (this._value) { return this._value instanceof Maybe ? this._value.map(fun) : new Maybe(fun(this._value)); }
         return this; },
     orElse: function (fun) {
         if (this._value instanceof Promise) {
@@ -27,6 +26,7 @@ Maybe.prototype = {
 };
 Maybe.of = value => value instanceof Maybe ? value : new Maybe(value);
 Maybe.all = function () {
+    if (arguments.length === 0) { return new Maybe(); }
     return Array.prototype.reduce.call(
         arguments,
         (maybe, part) => maybe.map(results =>

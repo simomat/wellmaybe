@@ -175,14 +175,17 @@ describe("natural Maybe", function () {
         assertThat(func, wasCalled().times(1));
     });
 
-    it("given a Maybe.all(), the function passed to then() is called with []", function () {
+    it("given a Maybe.all(), the function passed to then() is not called, but the function passed to orElse() is", function () {
         let maybe = Maybe.all();
-        let func = spy();
+        let func1 = spy();
+        let func2 = spy();
 
-        maybe.map(func);
+        maybe
+            .map(func1)
+            .orElse(func2);
 
-        assertThat(func, wasCalled().times(1));
-        assertThat(func, wasCalledWith([]));
+        assertThat(func1, wasNotCalled());
+        assertThat(func2, wasCalled().times(1));
     });
 
 
